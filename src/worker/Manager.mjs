@@ -143,11 +143,11 @@ class Manager extends Base {
         const me       = this,
               filePath = (opts.basePath || me.basePath) + opts.fileName,
               worker   = !Neo.config.isExperimental ? // todo: switch to the new syntax to create a worker from a JS module once browsers are ready
-                  new Worker(filePath) :
-                  new Worker(filePath, {type: 'module'});
+                  new SharedWorker(filePath) :
+                  new SharedWorker(filePath, {type: 'module'});
 
-        worker.addEventListener('message', me.onWorkerMessage.bind(me));
-        worker.addEventListener('error', me.onWorkerError.bind(me));
+        worker.port.onmessage = me.onWorkerMessage.bind(me);
+        worker.port.onerror   = me.onWorkerError.bind(me);
 
         return worker;
     }
@@ -156,9 +156,8 @@ class Manager extends Base {
      * Calls createWorker for each worker inside the this.workers config.
      */
     createWorkers() {
-        let me      = this,
-            hash    = location.hash,
-            workers = Object.entries(me.workers),
+        let me   = this,
+            hash = location.hash,
             key, value;
 
         // pass the initial hash value as Neo.configs
@@ -167,7 +166,7 @@ class Manager extends Base {
             Neo.config.hashString = hash.substr(1);
         }
 
-        for ([key, value] of workers) {
+        for ([key, value] of Object.entries(me.workers)) {
             try {
                 value.worker = me.createWorker(value);
             } catch (e) {
@@ -193,7 +192,7 @@ class Manager extends Base {
         me.constructedThreads++;
 
         if (me.constructedThreads === Object.keys(me.workers).length + 1) {
-            if (Neo.config.appPath) {
+            if (Neo.config.appPath) {console.log('loadApplication');
                 setTimeout(() => { // better save than sorry => all remotes need to be registered
                     me.loadApplication(Neo.config.appPath);
                 }, 20);
@@ -206,7 +205,7 @@ class Manager extends Base {
      * @param {Object} e
      */
     onWorkerError(e) {
-        if (!Neo.config.isExperimental) { // starting a worker from a JS module will show JS errors in a correct way
+        if (true) { // starting a worker from a JS module will show JS errors in a correct way
             console.log('Worker Error:', e);
         }
     }
@@ -222,10 +221,10 @@ class Manager extends Base {
             promise;
 
         const {
-             action,
-             destination: dest,
-             replyId
-        } = data;
+                  action,
+                  destination: dest,
+                  replyId
+              } = data;
 
         // console.log('Main: Incoming Worker message: ' + data.origin + ':' + action, data);
 
@@ -339,7 +338,7 @@ class Manager extends Base {
 
             const message = new Message(opts);
 
-            worker.postMessage(message, transfer);
+            worker.port.postMessage(message, transfer);
             return message;
         }
     }

@@ -40,12 +40,19 @@ class Base extends CoreBase {
         config = config || {};
 
         super(config);
+        self.onconnect = e => {
+            console.log('worker.Base onconnect');
+
+            this.port = e.ports[0];
+
+            this.port.onmessage = me.onMessage.bind(me);
+        };
 
         let me = this;
 
-        me.promises = {};
+        me.promises = {};console.log(self);
 
-        self.addEventListener('message', me.onMessage.bind(me), false);
+        //self.addEventListener('message', me.onMessage.bind(me), false);
 
         Neo.workerId      = me.workerId;
         Neo.currentWorker = me;
@@ -54,9 +61,11 @@ class Base extends CoreBase {
     /**
      *
      */
-    onConstructed() {
+    onConstructed() {console.log('onConstructed');
         super.onConstructed();
-        this.sendMessage('main', {action: 'workerConstructed'});
+        setTimeout(() => {
+            this.sendMessage('main', {action: 'workerConstructed'});
+        }, 50);
     }
 
     /**
@@ -146,12 +155,12 @@ class Base extends CoreBase {
      * @returns {Neo.worker.Message}
      * @private
      */
-    sendMessage(dest, opts, transfer) {
+    sendMessage(dest, opts, transfer) {console.log('worker sendMessage');
         opts.destination = dest;
 
         let message = new Message(opts);
 
-        self.postMessage(message, transfer);
+        this.port.postMessage(message, transfer);
         return message;
     }
 }
